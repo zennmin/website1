@@ -1,140 +1,591 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Image Encryption & Sharing — Prototype</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; color: #222; }
-    h1 { font-size: 22px; }
-    section { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
-    h2 { font-size: 16px; margin-top: 0; }
-    input, button { padding: 6px 10px; margin: 4px 4px 4px 0; font-size: 14px; }
-    button { cursor: pointer; background: #2563eb; color: white; border: none; border-radius: 4px; padding: 8px 14px; }
-    button:hover { background: #1d4ed8; }
-    .status { font-size: 13px; color: #555; margin-top: 6px; white-space: pre-wrap; }
-    .images-list { font-size: 14px; }
-    img.preview { max-width: 300px; margin-top: 10px; border: 1px solid #ccc; border-radius: 6px; }
-    code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Vault — Image Encryption & Sharing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EDF1F5;
+    --panel: #FFFFFF;
+    --ink: #16233E;
+    --ink-soft: #5C6B85;
+    --line: #D4DCE6;
+    --brass: #A9782F;
+    --brass-soft: #E9DCC3;
+    --unlocked: #2F7A6B;
+    --unlocked-bg: #E4F1EE;
+    --danger: #B4432E;
+    --danger-bg: #FBEAE6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body{
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(22,35,62,0.035) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(22,35,62,0.035) 40px),
+      var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 56px 20px 100px;
+  }
+
+  .wrap{ max-width: 640px; margin: 0 auto; }
+
+  header.masthead{
+    text-align: center;
+    margin-bottom: 44px;
+  }
+  .mark{
+    width: 34px; height: 34px; margin: 0 auto 18px;
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    position: relative;
+  }
+  .mark::before{
+    content:"";
+    position:absolute; left:50%; top:50%;
+    width:10px; height:10px;
+    border:1.5px solid var(--ink);
+    border-radius: 2px;
+    transform: translate(-50%,-30%);
+  }
+  .mark::after{
+    content:"";
+    position:absolute; left:50%; top:38%;
+    width:16px; height:10px;
+    border:1.5px solid var(--ink);
+    border-bottom:none;
+    border-radius: 8px 8px 0 0;
+    transform: translate(-50%,-100%);
+  }
+  h1{
+    font-family:'Source Serif 4', serif;
+    font-weight: 600;
+    font-size: 30px;
+    letter-spacing: -0.01em;
+    margin: 0 0 10px;
+  }
+  header.masthead p{
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    line-height: 1.6;
+    max-width: 440px;
+    margin: 0 auto;
+  }
+
+  .ledger{ position: relative; }
+  .ledger::before{
+    content:"";
+    position:absolute; left:19px; top:8px; bottom:8px; width:1px;
+    background: var(--line);
+  }
+
+  .entry{
+    position: relative;
+    padding-left: 56px;
+    margin-bottom: 22px;
+  }
+  .tab{
+    position:absolute; left:0; top:0;
+    width:40px; height:40px;
+    background: var(--panel);
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Source Serif 4', serif;
+    font-weight:600; font-size:16px;
+    z-index:1;
+  }
+  .entry.done .tab{
+    background: var(--unlocked);
+    border-color: var(--unlocked);
+    color: #fff;
+  }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 0 rgba(22,35,62,0.03);
+  }
+  .panel h2{
+    font-size: 15.5px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .panel .hint{
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin: 0 0 16px;
+    line-height: 1.5;
+  }
+
+  .row{ display:flex; gap:8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .row:last-child{ margin-bottom:0; }
+
+  input[type=text]{
+    flex: 1 1 140px;
+    min-width: 0;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #FBFCFD;
+    color: var(--ink);
+  }
+  input[type=text]:focus{
+    outline: none;
+    border-color: var(--brass);
+    box-shadow: 0 0 0 3px var(--brass-soft);
+  }
+  input[type=text]::placeholder{ color: #9AA6B8; }
+
+  button{
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 10px 16px;
+    border-radius: 7px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease;
+    white-space: nowrap;
+  }
+  button:hover{ background: #263352; }
+  button:active{ transform: scale(0.97); }
+  button:focus-visible{ outline: 2px solid var(--brass); outline-offset: 2px; }
+  button:disabled{ opacity:0.5; cursor: not-allowed; }
+
+  /* drop zone */
+  .dropzone{
+    border: 1.5px dashed var(--line);
+    border-radius: 8px;
+    padding: 18px;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 13px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .dropzone.drag{ border-color: var(--brass); background: var(--brass-soft); }
+  .dropzone img.thumb{
+    max-width: 100%; max-height: 120px;
+    border-radius: 6px;
+    display:block; margin: 0 auto 8px;
+  }
+
+  /* status line */
+  .status{
+    margin-top: 12px;
+    font-size: 13px;
+    display: none;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 7px;
+    line-height: 1.5;
+  }
+  .status.show{ display: flex; animation: stamp 0.22s ease; }
+  .status.ok{ background: var(--unlocked-bg); color: #1B4F44; }
+  .status.err{ background: var(--danger-bg); color: #7A2B1B; }
+  .status .dot{ flex-shrink:0; width:7px; height:7px; border-radius:50%; margin-top:5px; }
+  .status.ok .dot{ background: var(--unlocked); }
+  .status.err .dot{ background: var(--danger); }
+  @keyframes stamp{
+    from{ opacity:0; transform: scale(0.96); }
+    to{ opacity:1; transform: scale(1); }
+  }
+
+  code.k{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: rgba(22,35,62,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .id-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: rgba(22,35,62,0.05);
+    border: 1px solid var(--line);
+    padding: 4px 8px 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: all;
+  }
+  .id-chip:hover{ border-color: var(--brass); }
+  .id-chip svg{ width:12px; height:12px; opacity:0.6; }
+
+  .images-grid{ display:flex; flex-direction:column; gap:8px; }
+  .img-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font-size: 13px;
+  }
+  .img-row .name{ font-weight:500; }
+  .img-row .owner{ color: var(--ink-soft); font-size:12px; }
+  .empty-state{
+    color: var(--ink-soft);
+    font-size: 13px;
+    padding: 14px 0 2px;
+    text-align:center;
+  }
+
+  .preview-frame{
+    margin-top: 14px;
+    text-align: center;
+  }
+  .preview-frame img{
+    max-width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    display: none;
+  }
+  .unlock-note{
+    display:none;
+    align-items:center; justify-content:center; gap:6px;
+    margin-top:10px;
+    font-size: 12.5px;
+    color: var(--unlocked);
+    font-weight: 500;
+  }
+
+  .spinner{
+    width:13px; height:13px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    display:inline-block;
+    animation: spin 0.6s linear infinite;
+    vertical-align: -2px;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  footer{
+    text-align:center;
+    margin-top: 48px;
+    color: var(--ink-soft);
+    font-size: 12px;
+  }
+</style>
 </head>
 <body>
+<div class="wrap">
 
-<h1>🔐 Image Encryption & Sharing — Prototype Demo</h1>
-<p style="font-size:13px; color:#666;">
-  This demonstrates the full hybrid encryption pipeline: AES-256-GCM encrypts the image,
-  RSA-2048 wraps the AES key for each recipient. Try it: register two users, upload an
-  image as one user, share it with the other, then decrypt it as the recipient.
-</p>
+  <header class="masthead">
+    <div class="mark"></div>
+    <h1>The Vault</h1>
+    <p>Every image is sealed with a one-time AES-256 key before it ever touches storage. To open it, a person needs their own RSA private key — sharing means wrapping that same seal for someone new, not handing over a copy.</p>
+  </header>
 
-<section>
-  <h2>1. Register a User</h2>
-  <input type="text" id="regUsername" placeholder="username (e.g. alice)">
-  <button onclick="register()">Register</button>
-  <div class="status" id="regStatus"></div>
-</section>
+  <div class="ledger">
 
-<section>
-  <h2>2. Upload & Encrypt an Image</h2>
-  <input type="text" id="uploadUsername" placeholder="username">
-  <input type="file" id="imageInput" accept="image/*">
-  <button onclick="upload()">Encrypt & Upload</button>
-  <div class="status" id="uploadStatus"></div>
-</section>
+    <!-- STEP 1 -->
+    <div class="entry" id="entry-register">
+      <div class="tab">1</div>
+      <div class="panel">
+        <h2>Create an identity</h2>
+        <p class="hint">Generates an RSA-2048 key pair for this person — the private key never leaves the vault.</p>
+        <div class="row">
+          <input type="text" id="regUsername" placeholder="Choose a username">
+          <button onclick="register()" id="btnRegister">Register</button>
+        </div>
+        <div class="status" id="regStatus"></div>
+      </div>
+    </div>
 
-<section>
-  <h2>3. Share an Image</h2>
-  <input type="text" id="shareImageId" placeholder="image_id">
-  <input type="text" id="shareFrom" placeholder="from_username (owner)">
-  <input type="text" id="shareTo" placeholder="to_username (recipient)">
-  <button onclick="share()">Share</button>
-  <div class="status" id="shareStatus"></div>
-</section>
+    <!-- STEP 2 -->
+    <div class="entry" id="entry-upload">
+      <div class="tab">2</div>
+      <div class="panel">
+        <h2>Seal an image</h2>
+        <p class="hint">The image is encrypted with a fresh AES key the moment it's dropped in.</p>
+        <div class="row">
+          <input type="text" id="uploadUsername" placeholder="Uploading as…">
+        </div>
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('imageInput').click()">
+          <img id="thumbPreview" class="thumb" style="display:none">
+          <span id="dropzoneText">Drop an image here, or click to choose one</span>
+          <input type="file" id="imageInput" accept="image/*" style="display:none">
+        </div>
+        <div class="row">
+          <button onclick="upload()" id="btnUpload">Encrypt &amp; store</button>
+        </div>
+        <div class="status" id="uploadStatus"></div>
+      </div>
+    </div>
 
-<section>
-  <h2>4. View My Images</h2>
-  <input type="text" id="listUsername" placeholder="username">
-  <button onclick="listImages()">List Images</button>
-  <div class="status images-list" id="imagesList"></div>
-</section>
+    <!-- STEP 3 -->
+    <div class="entry" id="entry-share">
+      <div class="tab">3</div>
+      <div class="panel">
+        <h2>Grant access</h2>
+        <p class="hint">Re-wraps the same AES key with the recipient's public key — the image itself is never re-encrypted.</p>
+        <div class="row">
+          <input type="text" id="shareImageId" placeholder="Image ID">
+          <input type="text" id="shareFrom" placeholder="From (owner)">
+          <input type="text" id="shareTo" placeholder="To (recipient)">
+        </div>
+        <div class="row">
+          <button onclick="shareImage()" id="btnShare">Share</button>
+        </div>
+        <div class="status" id="shareStatus"></div>
+      </div>
+    </div>
 
-<section>
-  <h2>5. Decrypt & View</h2>
-  <input type="text" id="decryptImageId" placeholder="image_id">
-  <input type="text" id="decryptUsername" placeholder="username">
-  <button onclick="decryptImage()">Decrypt</button>
-  <div class="status" id="decryptStatus"></div>
-  <img id="preview" class="preview" style="display:none;">
-</section>
+    <!-- STEP 4 -->
+    <div class="entry" id="entry-list">
+      <div class="tab">4</div>
+      <div class="panel">
+        <h2>View a vault</h2>
+        <p class="hint">Lists every image this person has been granted a key for.</p>
+        <div class="row">
+          <input type="text" id="listUsername" placeholder="Username">
+          <button onclick="listImages()" id="btnList">Look up</button>
+        </div>
+        <div class="images-grid" id="imagesList"></div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="entry" id="entry-decrypt">
+      <div class="tab">5</div>
+      <div class="panel">
+        <h2>Unlock &amp; view</h2>
+        <p class="hint">Unwraps the AES key with this person's private key, then decrypts and verifies the image.</p>
+        <div class="row">
+          <input type="text" id="decryptImageId" placeholder="Image ID">
+          <input type="text" id="decryptUsername" placeholder="Username">
+          <button onclick="decryptImage()" id="btnDecrypt">Unlock</button>
+        </div>
+        <div class="status" id="decryptStatus"></div>
+        <div class="preview-frame">
+          <img id="preview">
+          <div class="unlock-note" id="unlockNote">
+            <span>&#128274;&#65039;&rarr;&#128275;&#65039;</span> Integrity verified — bytes match the original seal
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Prototype build — keys and images are held in memory for this session only.</footer>
+</div>
 
 <script>
 const API = '';
 
-async function register() {
-  const username = document.getElementById('regUsername').value.trim();
-  const res = await fetch(API + '/register', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({username})
-  });
-  const data = await res.json();
-  document.getElementById('regStatus').innerText = JSON.stringify(data);
+function setStatus(id, ok, message){
+  const el = document.getElementById(id);
+  el.className = 'status show ' + (ok ? 'ok' : 'err');
+  el.innerHTML = `<span class="dot"></span><span>${message}</span>`;
 }
 
-async function upload() {
-  const username = document.getElementById('uploadUsername').value.trim();
-  const file = document.getElementById('imageInput').files[0];
-  if (!file) { alert('Choose an image first'); return; }
-  const formData = new FormData();
-  formData.append('username', username);
-  formData.append('image', file);
+function markDone(entryId){
+  document.getElementById(entryId).classList.add('done');
+}
 
-  const res = await fetch(API + '/upload', { method: 'POST', body: formData });
-  const data = await res.json();
-  document.getElementById('uploadStatus').innerText = JSON.stringify(data, null, 2);
-  if (data.image_id) {
-    document.getElementById('shareImageId').value = data.image_id;
-    document.getElementById('decryptImageId').value = data.image_id;
+function idChip(value, label){
+  return `<span class="id-chip" onclick="navigator.clipboard.writeText('${value}')" title="Click to copy">${label ? label+': ' : ''}<code>${value}</code>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>`;
+}
+
+function busy(btnId, isBusy, label){
+  const btn = document.getElementById(btnId);
+  if(isBusy){
+    btn.dataset.label = btn.innerHTML;
+    btn.innerHTML = `<span class="spinner"></span> ${label}`;
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn.dataset.label;
+    btn.disabled = false;
   }
 }
 
-async function share() {
+// ---- Step 1: Register ----
+async function register(){
+  const username = document.getElementById('regUsername').value.trim();
+  if(!username){ setStatus('regStatus', false, 'Enter a username first.'); return; }
+  busy('btnRegister', true, 'Generating keys…');
+  try{
+    const res = await fetch(API + '/register', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username})
+    });
+    const data = await res.json();
+    if(res.ok){
+      setStatus('regStatus', true, `<strong>${username}</strong> registered — RSA-2048 key pair generated.`);
+      markDone('entry-register');
+      ['uploadUsername','shareFrom','listUsername','decryptUsername'].forEach(id=>{
+        if(!document.getElementById(id).value) document.getElementById(id).value = username;
+      });
+    } else {
+      setStatus('regStatus', false, data.error || 'Registration failed.');
+    }
+  } catch(e){
+    setStatus('regStatus', false, 'Could not reach the server.');
+  }
+  busy('btnRegister', false);
+}
+
+// ---- Step 2: Upload / drag-drop ----
+let selectedFile = null;
+const dropzone = document.getElementById('dropzone');
+const imageInput = document.getElementById('imageInput');
+
+imageInput.addEventListener('change', e => handleFile(e.target.files[0]));
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file){
+  if(!file) return;
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const thumb = document.getElementById('thumbPreview');
+    thumb.src = e.target.result;
+    thumb.style.display = 'block';
+    document.getElementById('dropzoneText').textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function upload(){
+  const username = document.getElementById('uploadUsername').value.trim();
+  if(!username){ setStatus('uploadStatus', false, 'Enter who is uploading.'); return; }
+  if(!selectedFile){ setStatus('uploadStatus', false, 'Choose an image first.'); return; }
+
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('image', selectedFile);
+
+  busy('btnUpload', true, 'Encrypting…');
+  try{
+    const res = await fetch(API + '/upload', { method:'POST', body: formData });
+    const data = await res.json();
+    if(res.ok){
+      setStatus('uploadStatus', true,
+        `Sealed. ${idChip(data.image_id, 'ID')} &nbsp; ${idChip(data.sha256.slice(0,16)+'…', 'SHA-256')}`);
+      markDone('entry-upload');
+      document.getElementById('shareImageId').value = data.image_id;
+      document.getElementById('decryptImageId').value = data.image_id;
+      document.getElementById('shareFrom').value = username;
+    } else {
+      setStatus('uploadStatus', false, data.error || 'Upload failed.');
+    }
+  } catch(e){
+    setStatus('uploadStatus', false, 'Could not reach the server.');
+  }
+  busy('btnUpload', false);
+}
+
+// ---- Step 3: Share ----
+async function shareImage(){
   const image_id = document.getElementById('shareImageId').value.trim();
   const from_username = document.getElementById('shareFrom').value.trim();
   const to_username = document.getElementById('shareTo').value.trim();
-
-  const res = await fetch(API + '/share', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({image_id, from_username, to_username})
-  });
-  const data = await res.json();
-  document.getElementById('shareStatus').innerText = JSON.stringify(data);
+  if(!image_id || !from_username || !to_username){
+    setStatus('shareStatus', false, 'Fill in the image ID, owner, and recipient.'); return;
+  }
+  busy('btnShare', true, 'Wrapping key…');
+  try{
+    const res = await fetch(API + '/share', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({image_id, from_username, to_username})
+    });
+    const data = await res.json();
+    if(res.ok){
+      setStatus('shareStatus', true, `Access granted to <strong>${to_username}</strong>.`);
+      markDone('entry-share');
+      document.getElementById('listUsername').value = to_username;
+      document.getElementById('decryptUsername').value = to_username;
+    } else {
+      setStatus('shareStatus', false, data.error || 'Share failed.');
+    }
+  } catch(e){
+    setStatus('shareStatus', false, 'Could not reach the server.');
+  }
+  busy('btnShare', false);
 }
 
-async function listImages() {
+// ---- Step 4: List ----
+async function listImages(){
   const username = document.getElementById('listUsername').value.trim();
-  const res = await fetch(API + '/images/' + username);
-  const data = await res.json();
-  const list = data.images.map(img => `• ${img.image_id} — "${img.filename}" (owner: ${img.owner})`).join('\n');
-  document.getElementById('imagesList').innerText = list || '(no images visible to this user)';
+  const list = document.getElementById('imagesList');
+  if(!username){ list.innerHTML = '<div class="empty-state">Enter a username to look up.</div>'; return; }
+
+  busy('btnList', true, 'Looking up…');
+  try{
+    const res = await fetch(API + '/images/' + encodeURIComponent(username));
+    const data = await res.json();
+    if(data.images && data.images.length){
+      list.innerHTML = data.images.map(img => `
+        <div class="img-row">
+          <span class="name">${img.filename}</span>
+          <span class="owner">${idChip(img.image_id)} &nbsp;owned by ${img.owner}</span>
+        </div>`).join('');
+      markDone('entry-list');
+    } else {
+      list.innerHTML = '<div class="empty-state">Nothing here yet — nothing has been shared with this person.</div>';
+    }
+  } catch(e){
+    list.innerHTML = '<div class="empty-state">Could not reach the server.</div>';
+  }
+  busy('btnList', false);
 }
 
-async function decryptImage() {
+// ---- Step 5: Decrypt ----
+async function decryptImage(){
   const image_id = document.getElementById('decryptImageId').value.trim();
   const username = document.getElementById('decryptUsername').value.trim();
+  const preview = document.getElementById('preview');
+  const note = document.getElementById('unlockNote');
+  preview.style.display = 'none';
+  note.style.display = 'none';
 
-  const res = await fetch(API + `/decrypt/${image_id}?username=${encodeURIComponent(username)}`);
-  if (!res.ok) {
-    const err = await res.json();
-    document.getElementById('decryptStatus').innerText = JSON.stringify(err);
-    document.getElementById('preview').style.display = 'none';
-    return;
+  if(!image_id || !username){ setStatus('decryptStatus', false, 'Enter both an image ID and username.'); return; }
+
+  busy('btnDecrypt', true, 'Unlocking…');
+  try{
+    const res = await fetch(API + `/decrypt/${encodeURIComponent(image_id)}?username=${encodeURIComponent(username)}`);
+    if(!res.ok){
+      const err = await res.json();
+      setStatus('decryptStatus', false, err.error || 'Access denied.');
+      busy('btnDecrypt', false);
+      return;
+    }
+    const blob = await res.blob();
+    preview.src = URL.createObjectURL(blob);
+    preview.style.display = 'block';
+    note.style.display = 'flex';
+    setStatus('decryptStatus', true, 'Unlocked successfully.');
+    markDone('entry-decrypt');
+  } catch(e){
+    setStatus('decryptStatus', false, 'Could not reach the server.');
   }
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  document.getElementById('preview').src = url;
-  document.getElementById('preview').style.display = 'block';
-  document.getElementById('decryptStatus').innerText = 'Decrypted successfully — integrity verified.';
+  busy('btnDecrypt', false);
 }
 </script>
-
 </body>
 </html>
