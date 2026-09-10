@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Image Encryption & Sharing — Prototype</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; color: #222; }
+    h1 { font-size: 22px; }
+    section { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+    h2 { font-size: 16px; margin-top: 0; }
+    input, button { padding: 6px 10px; margin: 4px 4px 4px 0; font-size: 14px; }
+    button { cursor: pointer; background: #2563eb; color: white; border: none; border-radius: 4px; padding: 8px 14px; }
+    button:hover { background: #1d4ed8; }
+    .status { font-size: 13px; color: #555; margin-top: 6px; white-space: pre-wrap; }
+    .images-list { font-size: 14px; }
+    img.preview { max-width: 300px; margin-top: 10px; border: 1px solid #ccc; border-radius: 6px; }
+    code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<h1>🔐 Image Encryption & Sharing — Prototype Demo</h1>
+<p style="font-size:13px; color:#666;">
+  This demonstrates the full hybrid encryption pipeline: AES-256-GCM encrypts the image,
+  RSA-2048 wraps the AES key for each recipient. Try it: register two users, upload an
+  image as one user, share it with the other, then decrypt it as the recipient.
+</p>
+
+<section>
+  <h2>1. Register a User</h2>
+  <input type="text" id="regUsername" placeholder="username (e.g. alice)">
+  <button onclick="register()">Register</button>
+  <div class="status" id="regStatus"></div>
+</section>
+
+<section>
+  <h2>2. Upload & Encrypt an Image</h2>
+  <input type="text" id="uploadUsername" placeholder="username">
+  <input type="file" id="imageInput" accept="image/*">
+  <button onclick="upload()">Encrypt & Upload</button>
+  <div class="status" id="uploadStatus"></div>
+</section>
+
+<section>
+  <h2>3. Share an Image</h2>
+  <input type="text" id="shareImageId" placeholder="image_id">
+  <input type="text" id="shareFrom" placeholder="from_username (owner)">
+  <input type="text" id="shareTo" placeholder="to_username (recipient)">
+  <button onclick="share()">Share</button>
+  <div class="status" id="shareStatus"></div>
+</section>
+
+<section>
+  <h2>4. View My Images</h2>
+  <input type="text" id="listUsername" placeholder="username">
+  <button onclick="listImages()">List Images</button>
+  <div class="status images-list" id="imagesList"></div>
+</section>
+
+<section>
+  <h2>5. Decrypt & View</h2>
+  <input type="text" id="decryptImageId" placeholder="image_id">
+  <input type="text" id="decryptUsername" placeholder="username">
+  <button onclick="decryptImage()">Decrypt</button>
+  <div class="status" id="decryptStatus"></div>
+  <img id="preview" class="preview" style="display:none;">
+</section>
+
+<script>
+const API = '';
+
+async function register() {
+  const username = document.getElementById('regUsername').value.trim();
+  const res = await fetch(API + '/register', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username})
+  });
+  const data = await res.json();
+  document.getElementById('regStatus').innerText = JSON.stringify(data);
+}
+
+async function upload() {
+  const username = document.getElementById('uploadUsername').value.trim();
+  const file = document.getElementById('imageInput').files[0];
+  if (!file) { alert('Choose an image first'); return; }
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('image', file);
+
+  const res = await fetch(API + '/upload', { method: 'POST', body: formData });
+  const data = await res.json();
+  document.getElementById('uploadStatus').innerText = JSON.stringify(data, null, 2);
+  if (data.image_id) {
+    document.getElementById('shareImageId').value = data.image_id;
+    document.getElementById('decryptImageId').value = data.image_id;
+  }
+}
+
+async function share() {
+  const image_id = document.getElementById('shareImageId').value.trim();
+  const from_username = document.getElementById('shareFrom').value.trim();
+  const to_username = document.getElementById('shareTo').value.trim();
+
+  const res = await fetch(API + '/share', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({image_id, from_username, to_username})
+  });
+  const data = await res.json();
+  document.getElementById('shareStatus').innerText = JSON.stringify(data);
+}
+
+async function listImages() {
+  const username = document.getElementById('listUsername').value.trim();
+  const res = await fetch(API + '/images/' + username);
+  const data = await res.json();
+  const list = data.images.map(img => `• ${img.image_id} — "${img.filename}" (owner: ${img.owner})`).join('\n');
+  document.getElementById('imagesList').innerText = list || '(no images visible to this user)';
+}
+
+async function decryptImage() {
+  const image_id = document.getElementById('decryptImageId').value.trim();
+  const username = document.getElementById('decryptUsername').value.trim();
+
+  const res = await fetch(API + `/decrypt/${image_id}?username=${encodeURIComponent(username)}`);
+  if (!res.ok) {
+    const err = await res.json();
+    document.getElementById('decryptStatus').innerText = JSON.stringify(err);
+    document.getElementById('preview').style.display = 'none';
+    return;
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  document.getElementById('preview').src = url;
+  document.getElementById('preview').style.display = 'block';
+  document.getElementById('decryptStatus').innerText = 'Decrypted successfully — integrity verified.';
+}
+</script>
+
+</body>
+</html>
